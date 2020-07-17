@@ -6,8 +6,3 @@ services:
     restart: unless-stopped
     ports:
       - "2200:22"
-    volumes:
-      - ~/.gradle:/root/.gradle
-      - ./config/init.gradle:/root/.gradle/init.gradle
-      - ./config/gradle.properties:/root/.gradle/gradle.properties
-      - ./config/sources.list:/etc/apt/sources.list

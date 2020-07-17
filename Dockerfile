@@ -1,43 +1,43 @@
-FROM ubuntu:18.04
+FROM debian:stretch
 
-LABEL maintainer=Crazygit
-LABEL homepage="https://github.com/crazygit/mainframer-docker"
+LABEL maintainer=Rosomack
 
 WORKDIR /android/sdk
-
-# set where to get commandline tools
-ARG commandlinetools_linux=https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip
-
-# Replace apt mirror to speed up in China
-#COPY config/sources.list /etc/apt/sources.list
+ARG commandlinetools_linux=https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip
 
 # Set the locale
 # https://stackoverflow.com/a/28406007/1957625
-RUN apt-get update && \
-    apt-get install -y locales && \
-    locale-gen en_US.UTF-8 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# RUN apt-get update && \
+#     apt-get add glibc-bin glibc-i18n glibc
+# RUN echo "en_UK" | xargs -i /usr/glibc-compat/bin/localedef -i {} -f UTF-8 {}.UTF-8 && \
 
-ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+# RUN localedef -c -f UTF-8 -i en_UK en_UK.UTF-8
 
-# ANDROID_HOME环境变量已经废弃不用，但是一些老项目的gradle需要
+# ENV LANG=en_UK.UTF-8 \
+#     LANGUAGE=en_UK:en \
+#     LC_ALL=en_UK.UTF-8
+
+# ANDROID_HOME
 ENV ANDROID_SDK_ROOT=/android/sdk \
     ANDROID_HOME=/android/sdk
-
-# add android env to the begin of file ~/.bashrc (测试发现添加到~/.bashrc文件末尾不生效)
-RUN bash -c 'echo -e "export ANDROID_HOME=${ANDROID_HOME}\nexport ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}\n"' | cat - ~/.bashrc > bashrc.tmp && mv bashrc.tmp ~/.bashrc
 
 # Install OpenJDK 8 and other dependences
 RUN apt-get update && \
     # required
-    apt-get install -y openjdk-8-jdk openssh-server wget unzip openssh-server rsync && \
-    # debug need
-    apt-get install -y vim git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get install -y \
+    bash \
+    git \
+    openssh-server \
+    wget \
+    unzip \
+    rsync \
+    openjdk-8-jdk
+
+# add android env to the begin of file ~/.bashrc (测试发现添加到~/.bashrc文件末尾不生效)
+RUN touch ~/.bashrc && \
+    echo "export ANDROID_HOME=${ANDROID_HOME}\nexport ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}\n" | cat - ~/.bashrc > bashrc.tmp && mv bashrc.tmp ~/.bashrc
+
+ENV ENV="/etc/profile" 
 
 # Install android commandline tools
 RUN wget -q ${commandlinetools_linux} -O tools.zip && unzip tools.zip && rm -f tools.zip
@@ -50,14 +50,12 @@ RUN mkdir licenses && \
     echo "d975f751698a77b662f1254ddbeed3901e976f5a" > licenses/intel-android-extra-license
 
 # Setup ssh server
-RUN apt-get update && \
-    apt-get install -y openssh-server && \
-    mkdir /var/run/sshd && \
+RUN mkdir /var/run/sshd && \
     echo 'root:root' |chpasswd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    cd /etc/ssh && \
+    ssh-keygen -A
 
 EXPOSE 22
 
 CMD ["/usr/sbin/sshd", "-D"]
-
